@@ -10,3 +10,4 @@ variable "dev-server-ports" {
   description = "dev-server-sec-gr-inbound-rules"
 }
 variable "devservertag" {}
+variable "environment" {}

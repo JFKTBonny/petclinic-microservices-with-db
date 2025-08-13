@@ -23,6 +23,7 @@ resource "aws_instance" "PetclinicServer" {
   }
   tags = {
     Name = var.devservertag
+    environment = var.environment
   }
 }
 
