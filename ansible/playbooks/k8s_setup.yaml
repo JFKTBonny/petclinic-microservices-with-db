@@ -1,0 +1,253 @@
+---
+- hosts: all
+  become: true
+  vars:
+    packages:
+      - apt-transport-https
+      - curl
+      - ca-certificates
+  tasks:
+    - name: Change hostname to private DNS name
+      ansible.builtin.command: hostnamectl set-hostname "{{ hostvars[inventory_hostname]['private_dns_name'] }}"
+      args:
+        warn: false
+      changed_when: false  # hostnamectl is idempotent, but you may want to adjust if you detect change
+
+    - name: Disable swap and comment out swap entries
+      ansible.builtin.shell: |
+        swapoff -a
+        sed -i '/ swap / s/^/#/' /etc/fstab
+      args:
+        warn: false
+      register: swapoff_result
+      changed_when: swapoff_result.rc == 0
+
+    - name: Enable bridged traffic for Kubernetes networking
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/k8s.conf
+        content: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+        mode: '0644'
+
+    - name: Reload sysctl settings
+      ansible.builtin.command: sysctl --system
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages for apt over HTTPS and curl
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+
+    # Updated Kubernetes installation method with official repo and keyrings
+    - name: Create /etc/apt/keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Kubernetes GPG key
+      ansible.builtin.get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+        dest: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        mode: '0644'
+
+    - name: Add Kubernetes apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /"
+        state: present
+        filename: kubernetes
+
+    - name: Update apt cache after adding Kubernetes repo
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install kubelet, kubeadm, kubectl and docker.io
+      ansible.builtin.apt:
+        name:
+          - kubelet=1.29.2-00
+          - kubeadm=1.29.2-00
+          - kubectl=1.29.2-00
+          - docker.io
+        state: present
+
+    - name: Hold kubelet, kubeadm, and kubectl at current version
+      ansible.builtin.apt:
+        name:
+          - kubelet=1.29.2-00
+          - kubeadm=1.29.2-00
+          - kubectl=1.29.2-00
+        state: present
+        mark_hold: yes
+
+    - name: Add user 'ubuntu' to docker group
+      ansible.builtin.user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Restart and enable Docker service
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+        enabled: yes
+
+    - name: Configure Docker daemon to use systemd as cgroup driver
+      ansible.builtin.copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+        mode: '0644'
+      notify:
+        - Restart Docker
+        - Restart Kubelet
+
+  handlers:
+    - name: Restart Docker
+      ansible.builtin.systemd:
+        name: docker
+        state: restarted
+        daemon_reload: yes
+
+    - name: Restart Kubelet
+      ansible.builtin.systemd:
+        name: kubelet
+        state: restarted
+
+- hosts: role_master
+  become: true
+  tasks:
+    - name: Pull Kubernetes images before installation
+      ansible.builtin.command: kubeadm config images pull
+
+    - name: Copy cluster configuration base file
+      ansible.builtin.copy:
+        src: ./clusterconfig-base.yml
+        dest: /home/ubuntu/clusterconfig-base.yml
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Install gettext-base package
+      ansible.builtin.apt:
+        name: gettext-base
+        state: present
+
+    - name: Produce clusterconfig.yml with control plane endpoint substituted
+      ansible.builtin.shell: |
+        export CONTROLPLANE_ENDPOINT={{ hostvars[inventory_hostname]['private_ip_address'] }}
+        envsubst < /home/ubuntu/clusterconfig-base.yml > /home/ubuntu/clusterconfig.yml
+      args:
+        executable: /bin/bash
+      changed_when: false  # to avoid rerunning unnecessarily
+
+    - name: Initialize Kubernetes cluster using kubeadm
+      ansible.builtin.command: kubeadm init --config /home/ubuntu/clusterconfig.yml
+      args:
+        creates: /etc/kubernetes/admin.conf
+
+    - name: Setup kubeconfig for ubuntu user
+      ansible.builtin.file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0700'
+
+    - name: Copy admin.conf to user's kubeconfig location
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Install Flannel pod network
+      ansible.builtin.command: kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+    - name: Generate kubeadm join command for workers
+      ansible.builtin.command: kubeadm token create --print-join-command
+      register: join_command_for_workers
+
+    - name: Register join command for workers
+      ansible.builtin.add_host:
+        name: kube_master
+        worker_join: "{{ join_command_for_workers.stdout }}"
+
+- hosts: role_worker
+  become: true
+  tasks:
+    - name: Join worker nodes to cluster
+      ansible.builtin.shell: "{{ hostvars['kube_master']['worker_join'] }}"
+      args:
+        warn: false
+      register: joining_result
+      failed_when: joining_result.rc != 0 and '"already a member of the cluster" not in joining_result.stderr'
+
+- hosts: role_master
+  become: false
+  tasks:
+    - name: Patch master and worker nodes with AWS providerID
+      ansible.builtin.shell: |
+        kubectl patch node {{ hostvars[groups['role_master'][0]]['private_dns_name'] }} -p '{"spec":{"providerID":"aws:///us-east-1a/{{ hostvars[groups['role_master'][0]]['instance_id'] }}" }}'
+        kubectl patch node {{ hostvars[groups['role_worker'][0]]['private_dns_name'] }} -p '{"spec":{"providerID":"aws:///us-east-1a/{{ hostvars[groups['role_worker'][0]]['instance_id'] }}" }}'
+        kubectl patch node {{ hostvars[groups['role_worker'][1]]['private_dns_name'] }} -p '{"spec":{"providerID":"aws:///us-east-1a/{{ hostvars[groups['role_worker'][1]]['instance_id'] }}" }}'
+      args:
+        chdir: /home/ubuntu
+
+    - name: Download Helm install script
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+        dest: /home/ubuntu/get_helm.sh
+        mode: '0755'
+
+    - name: Run Helm install script
+      ansible.builtin.command: /home/ubuntu/get_helm.sh
+      args:
+        creates: /usr/local/bin/helm
+
+    - name: Add and update AWS cloud-controller-manager Helm repo
+      ansible.builtin.command: helm repo add aws-cloud-controller-manager https://kubernetes.github.io/cloud-provider-aws
+      register: helm_repo_added
+      failed_when: false
+
+    - name: Update Helm repositories
+      ansible.builtin.command: helm repo update
+      when: helm_repo_added is succeeded
+
+    - name: Install or upgrade AWS cloud-controller-manager via Helm
+      ansible.builtin.command: >
+        helm upgrade --install aws-cloud-controller-manager aws-cloud-controller-manager/aws-cloud-controller-manager
+        --set image.tag=v1.20.0-alpha.0
+
+    - name: Deploy NGINX ingress controller for AWS
+      ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.2/deploy/static/provider/aws/deploy.yaml
+      args:
+        warn: false
+
+    - name: Deploy AWS EBS CSI Driver
+      ansible.builtin.command: kubectl apply -k github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable
+      args:
+        warn: false
+
+    - name: Copy storage.yml to remote
+      ansible.builtin.copy:
+        src: ./storage.yml
+        dest: /home/ubuntu/storage.yml
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Apply StorageClass configuration
+      ansible.builtin.command: kubectl apply -f /home/ubuntu/storage.yml
+      args:
+        warn: false
