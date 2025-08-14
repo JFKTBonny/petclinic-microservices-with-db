@@ -55,7 +55,8 @@
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: yes
-        cache_valid_time: 3600
+      environment:
+        DEBIAN_FRONTEND: noninteractive
 
     - name: Install required packages for apt over HTTPS and curl
       ansible.builtin.apt:
