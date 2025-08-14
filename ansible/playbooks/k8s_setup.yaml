@@ -188,10 +188,11 @@
     - name: Copy admin.conf to user's kubeconfig location
       ansible.builtin.copy:
         src: /etc/kubernetes/admin.conf
-        dest: /home/ubuntu/.kube/config
-        owner: ubuntu
-        group: ubuntu
+        dest: /home/{{ ansible_user }}/.kube/config
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
         mode: '0644'
+        remote_src: yes
 
     - name: Install Flannel pod network
       ansible.builtin.command: kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
