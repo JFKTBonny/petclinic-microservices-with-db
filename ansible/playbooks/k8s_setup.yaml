@@ -171,7 +171,6 @@
       args:
         executable: /bin/bash
       changed_when: false  # to avoid rerunning unnecessarily
-
     - name: Initialize Kubernetes cluster using kubeadm
       ansible.builtin.command: kubeadm init --config /var/lib/jenkins/petclinic-microservices-with-db/test-playbook-to-create-k8s-cluster/ansible/playbooks/clusterconfig-base.yaml
       args:
@@ -200,30 +199,25 @@
         KUBECONFIG: /etc/kubernetes/admin.conf
       changed_when: false
 
-    - hosts: all
-  tasks:
     - name: Get join command from master
       shell: kubeadm token create --print-join-command
       register: join_command_raw
-      delegate_to: "{{ groups['master'][0] }}"
       run_once: true
 
-    - name: Set join command fact
+    - name: Set join command fact for all hosts
       set_fact:
         kubeadm_join_command: "{{ join_command_raw.stdout }}"
+      run_once: true
+      delegate_to: localhost
 
-    
-  
-    - hosts: role_worker
-      become: true
+- hosts: role_worker
+  become: true
   tasks:
     - name: Join worker nodes to cluster
-      ansible.builtin.shell: "{{ kubeadm_join_command }}"
+      ansible.builtin.shell: "{{ hostvars[groups['role_master'][0]].kubeadm_join_command }}"
       register: joining_result
       changed_when: joining_result.rc == 0
       failed_when: joining_result.rc != 0 and 'already a member of the cluster' not in joining_result.stderr
-      args:
-        warn: false
 
 - hosts: role_master
   become: false
@@ -263,13 +257,9 @@
 
     - name: Deploy NGINX ingress controller for AWS
       ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.2/deploy/static/provider/aws/deploy.yaml
-      args:
-        warn: false
 
     - name: Deploy AWS EBS CSI Driver
       ansible.builtin.command: kubectl apply -k github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable
-      args:
-        warn: false
 
     - name: Copy storage.yml to remote
       ansible.builtin.copy:
@@ -281,5 +271,3 @@
 
     - name: Apply StorageClass configuration
       ansible.builtin.command: kubectl apply -f /home/ubuntu/storage.yml
-      args:
-        warn: false
