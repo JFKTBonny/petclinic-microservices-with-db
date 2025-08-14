@@ -213,6 +213,11 @@
 - hosts: role_worker
   become: true
   tasks:
+    - name: Delete node from cluster if exists
+      delegate_to: master-node
+      command: kubectl delete node {{ inventory_hostname }}
+      ignore_errors: yes
+
     - name: Reset Kubernetes on worker node
       become: yes
       command: kubeadm reset -f
@@ -229,6 +234,12 @@
         name: kubelet
         state: stopped
         enabled: no
+
+    - name: Restart container runtime
+      become: yes
+      service:
+        name: containerd
+        state: restarted
 
     - name: Join worker nodes to cluster
       ansible.builtin.shell: "{{ hostvars[groups['role_master'][0]].kubeadm_join_command }}"
