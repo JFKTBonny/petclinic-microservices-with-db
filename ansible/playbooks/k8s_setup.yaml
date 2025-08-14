@@ -14,7 +14,7 @@
       become: true  
       
     - name: Remove Keyrings Directory (if it exists)
-        ansible.builtin.shell: rm -rf /etc/apt/keyrings
+      ansible.builtin.shell: rm -rf /etc/apt/keyrings
 
     - name: Remove Existing Kubernetes Directory (if it exists)
       ansible.builtin.shell: sudo rm -rf /etc/apt/sources.list.d/pkgs_k8s_io_core_stable_v1_30_deb.list
