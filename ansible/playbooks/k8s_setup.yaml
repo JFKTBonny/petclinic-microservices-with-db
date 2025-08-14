@@ -9,10 +9,9 @@
   tasks:
     - name: Change hostname to private DNS name
       ansible.builtin.shell: hostnamectl set-hostname "{{ hostvars[inventory_hostname]['private_dns_name'] }}"
-      args:
-        warn: false
+      
       become: true  
-      changed_when: false  # hostnamectl is idempotent, but you may want to adjust if you detect change
+     
 
     - name: Disable swap and comment out swap entries
       ansible.builtin.shell: |
