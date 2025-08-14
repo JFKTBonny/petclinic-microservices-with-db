@@ -213,6 +213,23 @@
 - hosts: role_worker
   become: true
   tasks:
+    - name: Reset Kubernetes on worker node
+      become: yes
+      command: kubeadm reset -f
+
+    - name: Remove Kubernetes CNI configs
+      become: yes
+      file:
+        path: /etc/cni/net.d
+        state: absent
+
+    - name: Stop kubelet
+      become: yes
+      service:
+        name: kubelet
+        state: stopped
+        enabled: no
+
     - name: Join worker nodes to cluster
       ansible.builtin.shell: "{{ hostvars[groups['role_master'][0]].kubeadm_join_command }}"
       register: joining_result
