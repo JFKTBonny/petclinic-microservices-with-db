@@ -213,11 +213,12 @@
   become: true
   tasks:
     - name: Join worker nodes to cluster
-      ansible.builtin.shell: "{{ hostvars['kube_master']['worker_join'] }}"
+      ansible.builtin.shell: "{{ kubeadm_join_command }}"
+      register: joining_result
+      changed_when: joining_result.rc == 0
+      failed_when: joining_result.rc != 0 and 'already a member of the cluster' not in joining_result.stderr
       args:
         warn: false
-      register: joining_result
-      failed_when: joining_result.rc != 0 and '"already a member of the cluster" not in joining_result.stderr'
 
 - hosts: role_master
   become: false
