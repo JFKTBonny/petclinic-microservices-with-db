@@ -104,13 +104,10 @@
           - docker.io
         state: present
 
-    - name: Hold kubelet, kubeadm, and kubectl at current version
-      ansible.builtin.apt:
-        name:
-          - kubelet
-          - kubeadm
-          - kubectl
-        state: hold
+    - name: Hold kubelet, kubeadm, and kubectl
+      ansible.builtin.shell: apt-mark hold kubelet kubeadm kubectl
+      args:
+        warn: false
         
 
     - name: Add user 'ubuntu' to docker group
