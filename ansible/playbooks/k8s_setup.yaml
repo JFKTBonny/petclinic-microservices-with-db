@@ -153,7 +153,7 @@
 
     - name: Copy cluster configuration base file
       ansible.builtin.copy:
-        src: ./clusterconfig-base.yml
+        src: ./ansible/playbooks/clusterconfig-base.yaml
         dest: /home/ubuntu/clusterconfig-base.yml
         owner: ubuntu
         group: ubuntu
