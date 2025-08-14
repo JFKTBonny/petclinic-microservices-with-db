@@ -200,17 +200,17 @@
         KUBECONFIG: /etc/kubernetes/admin.conf
       changed_when: false
 
-    - name: Generate kubeadm join command for workers
-      ansible.builtin.command: kubeadm token create --print-join-command
-      register: join_command_for_workers
+    - name: Get kubeadm join command
+      ansible.builtin.shell: kubeadm token create --print-join-command
+      register: join_command_raw
+      changed_when: false
 
-    - name: Register join command for workers
-      ansible.builtin.add_host:
-        name: kube_master
-        worker_join: "{{ join_command_for_workers.stdout }}"
+    - name: Set kubeadm_join_command fact
+      ansible.builtin.set_fact:
+        kubeadm_join_command: "{{ join_command_raw.stdout }}"
 
-- hosts: role_worker
-  become: true
+    - hosts: role_worker
+      become: true
   tasks:
     - name: Join worker nodes to cluster
       ansible.builtin.shell: "{{ kubeadm_join_command }}"
