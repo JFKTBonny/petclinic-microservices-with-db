@@ -306,52 +306,52 @@
      #######################################
 
     
-      hosts: workers
+- hosts: workers
+  become: true
+  tasks:
+    - name: Reset kubeadm
+      command: kubeadm reset -f
+
+    - name: Remove Kubernetes CNI configs
+      file:
+        path: /etc/cni/net.d
+        state: absent
+
+    - name: Stop kubelet
+      service:
+        name: kubelet
+        state: stopped
+        enabled: no
+
+    - name: Restart container runtime
+      service:
+        name: docker
+        state: restarted
+        enabled: yes
+
+        
+    - hosts: masters
       become: true
       tasks:
-        - name: Reset kubeadm
-          command: kubeadm reset -f
+    - name: Reset kubeadm
+      command: kubeadm reset -f
 
-        - name: Remove Kubernetes CNI configs
-          file:
-            path: /etc/cni/net.d
-            state: absent
+    - name: Remove Kubernetes directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/kubernetes
+        - /var/lib/etcd
 
-        - name: Stop kubelet
-          service:
-            name: kubelet
-            state: stopped
-            enabled: no
+    - name: Stop kubelet
+      service:
+        name: kubelet
+        state: stopped
+        enabled: no
 
-        - name: Restart container runtime
-          service:
-            name: docker
-            state: restarted
-            enabled: yes
-
-        - name: Reset Kubernetes on master nodes
-          hosts: masters
-          become: true
-          tasks:
-        - name: Reset kubeadm
-          command: kubeadm reset -f
-
-        - name: Remove Kubernetes directories
-          file:
-            path: "{{ item }}"
-            state: absent
-          loop:
-            - /etc/kubernetes
-            - /var/lib/etcd
-
-        - name: Stop kubelet
-          service:
-            name: kubelet
-            state: stopped
-            enabled: no
-
-        - name: Restart container runtime
-          service:
-            name: docker
-            state: restarted
-            enabled: yes 
+    - name: Restart container runtime
+      service:
+        name: docker
+        state: restarted
+        enabled: yes 
