@@ -17,10 +17,9 @@
       ansible.builtin.shell: |
         swapoff -a
         sed -i '/ swap / s/^/#/' /etc/fstab
-      args:
-        warn: false
       register: swapoff_result
       changed_when: swapoff_result.rc == 0
+      become: true
 
     - name: Enable bridged traffic for Kubernetes networking
       ansible.builtin.copy:
