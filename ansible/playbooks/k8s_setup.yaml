@@ -98,18 +98,18 @@
     - name: Install kubelet, kubeadm, kubectl and docker.io
       ansible.builtin.apt:
         name:
-          - kubelet=1.29.2-00
-          - kubeadm=1.29.2-00
-          - kubectl=1.29.2-00
+          - kubelet
+          - kubeadm
+          - kubectl
           - docker.io
         state: present
 
     - name: Hold kubelet, kubeadm, and kubectl at current version
       ansible.builtin.apt:
         name:
-          - kubelet=1.29.2-00
-          - kubeadm=1.29.2-00
-          - kubectl=1.29.2-00
+          - kubelet
+          - kubeadm
+          - kubectl
         state: present
         mark_hold: yes
 
