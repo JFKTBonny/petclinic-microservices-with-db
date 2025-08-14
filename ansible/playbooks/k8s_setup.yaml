@@ -49,16 +49,27 @@
         state: directory
         mode: '0755'
 
-    - name: Download Kubernetes GPG key
-      get_url:
-        url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
-        dest: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    - name: Download Kubernetes Release key and dearmor it
+      ansible.builtin.shell: >
+        curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg    
+
+    - name: Set permissions on the Kubernetes apt keyring
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
         mode: '0644'
 
     - name: Add Kubernetes apt repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /"
         state: present
+        filename: kubernetes
+
+    - name: Set permissions on Kubernetes sources list
+      ansible.builtin.file:
+        path: /etc/apt/sources.list.d/kubernetes.list
+        mode: '0644'    
 
     - name: Update apt cache after adding Kubernetes repo
       ansible.builtin.apt:
