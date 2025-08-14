@@ -173,7 +173,7 @@
       changed_when: false  # to avoid rerunning unnecessarily
 
     - name: Initialize Kubernetes cluster using kubeadm
-      ansible.builtin.command: kubeadm init --config /home/ubuntu/clusterconfig.yml
+      ansible.builtin.command: kubeadm init --config /var/lib/jenkins/petclinic-microservices-with-db/test-playbook-to-create-k8s-cluster/ansible/playbooks/clusterconfig-base.yaml
       args:
         creates: /etc/kubernetes/admin.conf
 
