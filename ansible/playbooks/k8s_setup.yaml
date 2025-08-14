@@ -52,11 +52,11 @@
     - name: Reload sysctl settings
       ansible.builtin.command: sysctl --system
 
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: yes
-      environment:
-        DEBIAN_FRONTEND: noninteractive
+    # - name: Update apt cache
+    #   ansible.builtin.apt:
+    #     update_cache: yes
+    #   environment:
+    #     DEBIAN_FRONTEND: noninteractive
 
     - name: Install required packages for apt over HTTPS and curl
       ansible.builtin.apt:
