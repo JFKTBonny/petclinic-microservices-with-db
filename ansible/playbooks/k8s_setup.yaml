@@ -8,7 +8,7 @@
       - ca-certificates
   tasks:
     - name: Change hostname to private DNS name
-      ansible.builtin.command: hostnamectl set-hostname "{{ hostvars[inventory_hostname]['private_dns_name'] }}"
+      ansible.builtin.shell: hostnamectl set-hostname "{{ hostvars[inventory_hostname]['private_dns_name'] }}"
       args:
         warn: false
       changed_when: false  # hostnamectl is idempotent, but you may want to adjust if you detect change
