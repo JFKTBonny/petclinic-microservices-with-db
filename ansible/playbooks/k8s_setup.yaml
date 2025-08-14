@@ -330,9 +330,9 @@
         enabled: yes
 
         
-    - hosts: masters
-      become: true
-      tasks:
+- hosts: masters
+  become: true
+  tasks:
     - name: Reset kubeadm
       command: kubeadm reset -f
 
