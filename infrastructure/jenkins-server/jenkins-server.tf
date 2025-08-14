@@ -4,70 +4,92 @@
 //Jenkins Server will run on Amazon Linux 2 EC2 Instance with
 //custom security group allowing HTTP(80, 8080) and SSH (22) connections from anywhere.
 
-# provider "aws" {
-#   region = var.region
-#   //  access_key = ""
-#   //  secret_key = ""
-#   //  If you have entered your credentials in AWS CLI before, you do not need to use these arguments.
-# }
+provider "aws" {
+  region = var.region
+  //  access_key = ""
+  //  secret_key = ""
+  //  If you have entered your credentials in AWS CLI before, you do not need to use these arguments.
+}
 
-# resource "aws_instance" "tf-jenkins-server" {
-#   ami                    = var.ami
-#   instance_type          = var.instance_type
-#   key_name               = var.mykey
-#   vpc_security_group_ids = [aws_security_group.tf-jenkins-sec-gr.id]
-#   iam_instance_profile   = aws_iam_instance_profile.tf-jenkins-server-profile.name
-#   ebs_block_device {
-#     device_name = "/dev/xvda"
-#     volume_type = "gp2"
-#     volume_size = 16
-#   }
-#   tags = {
-#     Name   = var.jenkins-server-tag
-#     server = "Jenkins"
-#   }
-#   user_data = file("jenkins-data.sh")
-# }
+resource "aws_instance" "tf-jenkins-server" {
+  ami                    = var.ami
+  instance_type          = var.instance_type
+  key_name               = var.mykey
+  vpc_security_group_ids = [aws_security_group.tf-jenkins-sec-gr.id]
+  iam_instance_profile   = aws_iam_instance_profile.tf-jenkins-server-profile.name
+  ebs_block_device {
+    device_name = "/dev/xvda"
+    volume_type = "gp2"
+    volume_size = 16
+  }
 
-# resource "aws_security_group" "tf-jenkins-sec-gr" {
-#   name = var.jenkins_server_secgr
-#   tags = {
-#     Name = var.jenkins_server_secgr
-#   }
-#   ingress {
-#     from_port   = 80
-#     protocol    = "tcp"
-#     to_port     = 80
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   ingress {
-#     from_port   = 22
-#     protocol    = "tcp"
-#     to_port     = 22
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   ingress {
-#     from_port   = 8080
-#     protocol    = "tcp"
-#     to_port     = 8080
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   egress {
-#     from_port   = 0
-#     protocol    = -1
-#     to_port     = 0
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-# }
+  
+  tags = {
+    # Name   = var.jenkins-server-tag
+    server      = "Jenkins"
+    environment = "dev"
+  }
+  user_data = file("jenkins-data.sh")
 
 
-# output "JenkinsDNS" {
-#   value = aws_instance.tf-jenkins-server.public_dns
-# }
+}
 
-# output "JenkinsURL" {
-#   value = "http://${aws_instance.tf-jenkins-server.public_dns}:8080"
-# }
+resource "null_resource" "get_jenkins_password" {
+  triggers = {
+    instance_id = aws_instance.tf-jenkins-server.id
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+ssh -o StrictHostKeyChecking=no \
+    -i /home/bonny/Downloads/petclinic.pem \
+    ec2-user@${aws_instance.tf-jenkins-server.public_ip} \
+    "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
+EOT
+  }
+}
+
+
+resource "aws_security_group" "tf-jenkins-sec-gr" {
+  name = "jenkins_server_secgr"
+  tags = {
+    Name        = "jenkins_server_secgr"
+    environment = "dev"
+  }
+  ingress {
+    from_port   = 80
+    protocol    = "tcp"
+    to_port     = 80
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    protocol    = "tcp"
+    to_port     = 22
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 8080
+    protocol    = "tcp"
+    to_port     = 8080
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    protocol    = -1
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+output "JenkinsDNS" {
+  value = aws_instance.tf-jenkins-server.public_dns
+}
+
+output "JenkinsURL" {
+  value = "http://${aws_instance.tf-jenkins-server.public_dns}:8080"
+}

@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 set -e  # Exit immediately on errors
 
 echo "==== [INFO]...Updating OS packages ===="
@@ -56,10 +56,8 @@ sudo rm -rf aws awscliv2.zip
 
 
 echo "====[INFO]... Installing Python 3, Ansible, and Boto3 ===="
-sudo dnf update
-sudo dnf install python3-pip 
-pip install ansible 
-pip install boto3 
+sudo yum update
+sudo yum install ansible.noarch python3-boto3.noarch -y
 
 echo "===[INFO]...= Installing Terraform ===="
 sudo yum install -y yum-utils
