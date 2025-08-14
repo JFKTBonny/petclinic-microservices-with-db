@@ -259,7 +259,8 @@
       ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.2/deploy/static/provider/aws/deploy.yaml
 
     - name: Deploy AWS EBS CSI Driver
-      ansible.builtin.command: kubectl apply -k github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable
+      ansible.builtin.command: >
+        kubectl apply -k github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable?ref=release-0.13
 
     - name: Copy storage.yml to remote
       ansible.builtin.copy:
