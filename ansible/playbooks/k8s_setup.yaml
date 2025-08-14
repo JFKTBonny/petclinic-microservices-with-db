@@ -3,23 +3,43 @@
   become: true
   vars:
     packages:
+      - gnupg2
       - apt-transport-https
+      - software-properties-common
       - curl
       - ca-certificates
   tasks:
     - name: Change hostname to private DNS name
       ansible.builtin.shell: hostnamectl set-hostname "{{ hostvars[inventory_hostname]['private_dns_name'] }}"
-      
       become: true  
-     
+      
+    - name: Remove Keyrings Directory (if it exists)
+        ansible.builtin.shell: rm -rf /etc/apt/keyrings
 
-    - name: Disable swap and comment out swap entries
-      ansible.builtin.shell: |
-        swapoff -a
-        sed -i '/ swap / s/^/#/' /etc/fstab
-      register: swapoff_result
-      changed_when: swapoff_result.rc == 0
+    - name: Remove Existing Kubernetes Directory (if it exists)
+      ansible.builtin.shell: sudo rm -rf /etc/apt/sources.list.d/pkgs_k8s_io_core_stable_v1_30_deb.list
+
+    - name: Disable swap
+      ansible.builtin.command:
+        cmd: swapoff -a
+
+    - name: Ensure swap is disabled on boot
+      ansible.builtin.command:
+        cmd: sudo sed -i -e '/\/swap.img\s\+none\s\+swap\s\+sw\s\+0\s\+0/s/^/#/' /etc/fstab
+
+    - name: Add kernel modules for Containerd
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/containerd.conf
+        content: |
+          overlay
+          br_netfilter
+
+    - name: Load kernel modules for Containerd
+      ansible.builtin.shell:
+        cmd: modprobe overlay && modprobe br_netfilter
       become: true
+    
+    
 
     - name: Enable bridged traffic for Kubernetes networking
       ansible.builtin.copy:
