@@ -305,7 +305,7 @@
      # Cluster Cleanup / Tear-down Section #
      #######################################
 
-    - name: Reset Kubernetes on worker nodes
+    
       hosts: workers
       become: true
       tasks:
