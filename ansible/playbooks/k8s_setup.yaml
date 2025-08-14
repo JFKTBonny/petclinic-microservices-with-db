@@ -110,8 +110,8 @@
           - kubelet
           - kubeadm
           - kubectl
-        state: present
-        mark_hold: yes
+        state: hold
+        
 
     - name: Add user 'ubuntu' to docker group
       ansible.builtin.user:
