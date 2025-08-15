@@ -1,0 +1,13 @@
+curl -SsL "https://github.com/rancher/cli/releases/download/v2.6.7/rancher-linux-amd64-v2.6.7.tar.gz" -o "rancher-cli.tar.gz"
+tar -zxvf rancher-cli.tar.gz
+sudo mv ./rancher-v2.6.7/rancher /usr/local/bin/rancher
+chmod +x /usr/local/bin/rancher
+rancher --version
+
+
+docker run -d --privileged \
+ --restart=unless-stopped \
+ -p 8080:80 \
+ -p 8443:443 \
+ --name rancher \
+ rancher/rancher
