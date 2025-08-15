@@ -1,0 +1,9 @@
+sudo su - jenkins
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH=$PATH:/usr/bin:/bin
+mkdir -p ~/.aws
+chmod 700 ~/.aws
+sudo cp /home/bonny/.aws/credentials /var/lib/jenkins/.aws/credentials
+sudo cp /home/bonny/.aws/config /var/lib/jenkins/.aws/config
+sudo chown -R jenkins:jenkins /var/lib/jenkins/.aws
+eksctl create cluster -f cluster-config.yaml

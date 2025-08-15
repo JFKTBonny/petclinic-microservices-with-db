@@ -23,4 +23,4 @@ managedNodeGroups:
     ssh:                          # SSH access configuration for worker nodes
       allow: true                 # Allow SSH access
       publicKeyName: petclinic   # Replace with your existing EC2 key pair name in AWS
-# This is an eksctl ClusterConfig
+# This is an eksctl ClusterConfig that can be used to ceate an aws EKS k8s Cluster

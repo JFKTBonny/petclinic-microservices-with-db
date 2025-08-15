@@ -1,0 +1,12 @@
+# Download the Amazon EKS vended kubectl binary
+curl -o kubectl https://s3.us-west-2.amazonaws.com/amazon-eks/1.23.7/2022-06-29/bin/linux/amd64/kubectl
+
+# Apply execute permissions to the binary.
+chmod +x ./kubectl
+
+# Move the kubectl binary to /usr/local/bin.
+sudo mv kubectl /usr/local/bin
+
+# After you install kubectl , you can verify its version with the following command
+kubectl version --short --client
+
