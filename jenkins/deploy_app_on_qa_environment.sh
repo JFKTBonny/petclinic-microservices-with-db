@@ -3,7 +3,7 @@ envsubst < kubernetes/petclinic_chart/values-template.yaml > kubernetes/petclini
 sed -i s/HELM_VERSION/${BUILD_NUMBER}/ kubernetes/petclinic_chart/Chart.yaml
 helm plugin remove s3
 helm plugin install https://github.com/hypnoglow/helm-s3.git
-AWS_REGION=us-east-1 helm s3 init s3://petclinic-helm-charts-bonny
+AWS_REGION=us-east-1 helm s3 init --force  s3://petclinic-helm-charts-bonny
 AWS_REGION=$AWS_REGION helm repo add stable-petclinic s3://petclinic-helm-charts-bonny/stable/myapp/ || echo "repository name already exists"
 AWS_REGION=$AWS_REGION helm repo update
 helm package kubernetes/petclinic_chart
