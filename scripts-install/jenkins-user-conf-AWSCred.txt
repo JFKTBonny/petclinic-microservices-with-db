@@ -6,4 +6,4 @@ chmod 700 ~/.aws
 sudo cp /home/bonny/.aws/credentials /var/lib/jenkins/.aws/credentials
 sudo cp /home/bonny/.aws/config /var/lib/jenkins/.aws/config
 sudo chown -R jenkins:jenkins /var/lib/jenkins/.aws
-eksctl create cluster -f cluster-config.yaml
+eksctl create cluster -f cluster-config.yaml : to create a cluster using the eksctl yaml  "cluster-config.yaml" 
