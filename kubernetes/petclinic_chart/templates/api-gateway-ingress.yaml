@@ -15,7 +15,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: '{{ .values.dns_name }}'
+    - host: '{{ .Values.DNS_NAME}}'
       http:
         paths:
           - backend:
