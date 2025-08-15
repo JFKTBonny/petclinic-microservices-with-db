@@ -1,0 +1,26 @@
+apiVersion: eksctl.io/v1alpha5   # eksctl config schema version
+kind: ClusterConfig              # This is an EKS cluster configuration
+
+metadata:
+  name: petclinic-cluster         # Name of the EKS cluster
+  region: us-east-1               # AWS region where the cluster will be created
+  version: "1.30"                 # (Optional) Specific Kubernetes version for the cluster
+
+# Availability zones to spread the nodes across for high availability
+availabilityZones:
+  - us-east-1a
+  - us-east-1b
+  - us-east-1c
+
+managedNodeGroups:
+  - name: ng-1                    # Name of the managed node group
+    instanceType: t3a.medium      # EC2 instance type for each node
+    desiredCapacity: 2            # Number of nodes to start with
+    minSize: 2                    # Minimum number of nodes in the group
+    maxSize: 3                    # Maximum number of nodes in the group
+    volumeSize: 8                 # Size (in GiB) of the root EBS volume per node
+    volumeType: gp3               # Use gp3 for better cost/performance than gp2
+    ssh:                          # SSH access configuration for worker nodes
+      allow: true                 # Allow SSH access
+      publicKeyName: petclinic   # Replace with your existing EC2 key pair name in AWS
+# This is an eksctl ClusterConfig
