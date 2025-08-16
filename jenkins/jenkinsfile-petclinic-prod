@@ -70,7 +70,9 @@ pipeline {
                     --region $AWS_REGION \
                     --name $CLUSTER_NAME \
                     --kubeconfig kubernetes/config
+
                 """
+                sh "kubectl apply -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.13.2/config/master/aws-k8s-cni.yaml"
                 sh "kubectl --kubeconfig=kubernetes/config create namespace petclinic-prod-ns || true"
                 // Replace placeholders in chart
                 sh "envsubst < kubernetes/petclinic_chart/values-template.yaml > kubernetes/petclinic_chart/values.yaml"
