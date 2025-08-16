@@ -106,7 +106,7 @@ pipeline {
                 echo "Setup Kubernetes cluster for ${APP_NAME} App"
                 sh "ansible-playbook -i ./ansible/inventory/dev_stack_dynamic_inventory_aws_ec2.yaml ./ansible/playbooks/kubernetes_setup.yaml"
             }
-        
+        }
         stage('Deploy App on Kubernetes cluster'){
             steps {
                 echo 'Deploying App on Kubernetes'
